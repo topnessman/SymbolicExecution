@@ -2,4 +2,4 @@
 /org/
 /test/
 *.class
-/bin/*
+/bin

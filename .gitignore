@@ -1,5 +1,7 @@
-/jacop-4.4.0.jar
-/org/
-/test/
-*.class
-/bin
+bin/
+build/
+manifest.mf
+nbproject/*
+!nbproject/project.properties
+!nbproject/project.xml
+.settings/

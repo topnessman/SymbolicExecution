@@ -14,10 +14,23 @@ import org.jacop.search.Search;
 import org.jacop.search.SelectChoicePoint;
 
 import test.TestLauncher;
+
+/**
+ * SymbolicSolver is to receive Constraint set, encode it to Jacop solver, solve
+ * and get solution, then automatically launch the testcase using the solution
+ *
+ * @author tamier
+ *
+ */
 public class SymbolicSolver {
 
+    /**
+     * Map of string that represents the name of Variable in VARIABLE state to
+     * IntVar the represent it in solver
+     */
     HashMap<String, IntVar> map = new HashMap<>();
 
+    // Solve set of set of Constraints
     public void solvePermutatedConstraintSet(
             Set<Set<Constraint>> permutatedConstraintSet) {
         for (Set<Constraint> constraintSet : permutatedConstraintSet) {
@@ -25,12 +38,20 @@ public class SymbolicSolver {
         }
     }
 
+    /**
+     * Using a set of Constraints, encode them to solver, gets the solutioin,
+     * and lauches test
+     *
+     * @param constraintSet
+     *            set of Constraints to be solved.
+     */
     public void solve(Set<Constraint> constraintSet) {
         System.out.println("-----Solving----");
         /*System.out.println("These are the constraints generated:");
         for (Constraint c : constraintSet) {
             System.out.println(c);
         }*/
+        // Standard steps of calling Jacop solver
         Store store = new Store();
         for (Constraint c : constraintSet) {
             encodeAndPost(c, store);
@@ -66,7 +87,14 @@ public class SymbolicSolver {
         System.out.println("-----Solver ends----");
     }
 
-
+    /**
+     * Encode the Constraint and post it to Store of Jacop solver
+     *
+     * @param c
+     *            Constraint that needs to be encoded and posted
+     * @param store
+     *            Jacop Store that stores the constraints among IntVar
+     */
     private void encodeAndPost(Constraint c, Store store) {
     
         SymbolicValue refined = SymbolicValue
@@ -77,7 +105,7 @@ public class SymbolicSolver {
         int i = 0;
         for (Entry<Variable, Integer> e : refined.getValueMap().entrySet()) {
             Variable key = e.getKey();
-            if (key.getType() == Variable.TYPE.VAR) {
+            if (key.getType() == Variable.TYPE.VARIABLE) {
                 vars[i] = getOrCreateIntVar(key.getVariableName(), store);
             } else {
                 vars[i] = new IntVar(store, String.valueOf(key.getConstantValue()), key.getConstantValue(),
@@ -91,10 +119,17 @@ public class SymbolicSolver {
         store.impose(ctr);
     }
 
+    /**
+     * If the Variable in VARIABLE state with value of parameter "name", get its
+     * IntVar from cache. Otherwise, create a new IntVar that represents this
+     * Variable in VARIABLE state
+     */
     IntVar getOrCreateIntVar(String name, Store store) {
         if (map.containsKey(name)) {
             return map.get(name);
         }
+        // -100, 100 represent the lower and upper bound of solution to this
+        // IntVar
         IntVar returnIntVar = new IntVar(store, name, -100, 100);
         map.put(name, returnIntVar);
         return returnIntVar;

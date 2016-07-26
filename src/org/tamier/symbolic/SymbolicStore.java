@@ -10,8 +10,22 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
+/**
+ * SymbolicStore holds a map, whose key is LocalVariableNode/ IntegerLiteralNode
+ * and value is SymbolicValue, i.e. another map of Variable to Integer.
+ *
+ * @author tamier
+ *
+ */
 public class SymbolicStore implements Store<SymbolicStore> {
+    /**
+     * VariableManager to create Variables, which are the ingredients of
+     * SymbolicValue
+     */
     VariableManager variableManager;
+    /**
+     * Map of Node to its SymbolicValue
+     */
     Map<Node, SymbolicValue> nodeToSymbolicMapping;
     
     public SymbolicStore(VariableManager variableManager) {
@@ -24,7 +38,16 @@ public class SymbolicStore implements Store<SymbolicStore> {
         this.nodeToSymbolicMapping = outSourceMapping;
         this.variableManager = variableManager;
     }
-    
+
+    /**
+     * Get or create SymbolicValue for Nodes. It the Node is not stored in the
+     * map, create a new SymbolicValue for it and store it in mapping.
+     * Otherwise, get the SymbolicValue from the map.
+     *
+     * @param n
+     *            Node whose SymbolicValue is expected
+     * @return SymbolicValue of that Node
+     */
     public SymbolicValue getOrCreateSymbolicValue(Node n) {
         if(!nodeToSymbolicMapping.containsKey(n)){
             Map<Variable, Integer> outSourceMap = new HashMap<>();
@@ -40,6 +63,16 @@ public class SymbolicStore implements Store<SymbolicStore> {
         return nodeToSymbolicMapping.get(n);
     }
 
+    /**
+     * Method to update the SymbolicValue of a Node if that Node doesn't exist
+     * in map. Otherwise, put the parameter newSymValue in map as the
+     * SymbolicValue of that Node
+     *
+     * @param n
+     *            Node whose SymbolicValue will be updated
+     * @param newSymValue
+     *            new SymbolicValue to set
+     */
     public void updateSymbolicValue(Node n, SymbolicValue newSymValue) {
         // TODO Is it correct to store LocalVariableNode only?
         assert (n instanceof LocalVariableNode) || (n instanceof IntegerLiteralNode);
@@ -50,12 +83,19 @@ public class SymbolicStore implements Store<SymbolicStore> {
         }
         
     }
+
     @Override
     public SymbolicStore copy() {
         return new SymbolicStore(variableManager.copy(),
                 new HashMap<>(nodeToSymbolicMapping));
     }
 
+    /**
+     * Method that takes the least upper bound of this and another
+     * SymbolicStore. If a Node only exists in one of the store, directly put
+     * its SymbolicValue to the result. Otherwise, take the least upper bound of
+     * the two SymbolicValues of the same Node in two SymbolicStore
+     */
     @Override
     public SymbolicStore leastUpperBound(SymbolicStore other) {
         Map<Node, SymbolicValue> newNodeToSymbolicMapping = new HashMap<Node, SymbolicValue>();

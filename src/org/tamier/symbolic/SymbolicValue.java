@@ -6,20 +6,34 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 
+/**
+ * AbstractValue of symbolic execution. It has three types: SYMBOLIC, TOP,
+ * BOTTOM. Only SymbolicValue in SYMBOLIC state represents a meaningful symbolic
+ * state - an unknown yet trackable value of a parameter. SymbolicValue is a
+ * linear combination of Variables. See also <link>Variable</link> for more
+ * information.
+ *
+ * @author tamier
+ *
+ */
 public class SymbolicValue implements AbstractValue<SymbolicValue> {
 
+    // Enum to represent different states of SymbolicValue
     public enum Type {
         SYMBOLIC, TOP, BOTTOM,
     }
 
-    // Two properties of SymbolicValue
-    // enum type
+    /**
+     * Indicates this SymbolicValue's state. Only SYMBOLIC state has non-empty
+     * valueMap
+     */
     private Type type;
-    // data field
+    /** Mapping of <link>Variable</link> to its coefficient */
     private Map<Variable, Integer> valueMap;
 
     public SymbolicValue() {
         valueMap = new HashMap<Variable, Integer>();
+        // Default type if TOP, representing any value
         this.type = Type.TOP;
     }
 
@@ -28,6 +42,12 @@ public class SymbolicValue implements AbstractValue<SymbolicValue> {
         this.type = type;
     }
 
+    /**
+     * Create a SymbolicValue holding an existing valueMap
+     *
+     * @param outSourceMap
+     *            existing valueMap that represents a symbolic value
+     */
     public SymbolicValue(Map<Variable, Integer> outSourceMap) {
         valueMap = outSourceMap;
         this.type = Type.SYMBOLIC;
@@ -49,30 +69,60 @@ public class SymbolicValue implements AbstractValue<SymbolicValue> {
         return type;
     }
 
+    /**
+     * Getter method to get the valueMap of this SymbolicValue. Only when this
+     * SymbolicValue is in SYMBOLIC state, it has an effective valueMap that
+     * represents a symbolic value.
+     *
+     * @return valueMap that effectively represents a symbolic value
+     */
     public Map<Variable, Integer> getValueMap() {
         assert isSymbolic();
         return valueMap;
     }
 
+    /**
+     * Setter method to update valueMap of this
+     *
+     * @param mapToSet
+     *            new valueMap to be set from
+     */
     public void setValueMap(Map<Variable, Integer> mapToSet) {
         assert isSymbolic();
         valueMap = mapToSet;
     }
 
+    /**
+     * Add another SymbolicValue to this
+     *
+     * @param increment
+     *            SymbolicValue to be added to this
+     * @return this object after adding up increment
+     */
     public SymbolicValue add(SymbolicValue increment) {
         assert this.isSymbolic() && increment.isSymbolic();
         for (Variable v : increment.getValueMap().keySet()) {
             if (valueMap.containsKey(v)) {
+                // Add up the two coefficients and put it back to valueMap of
+                // this
                 Integer newFrequence = valueMap.get(v)
                         + increment.valueMap.get(v);
                 valueMap.put(v, newFrequence);
             } else {
+                // this doesn't contain Variable v, create a new Entry in
+                // valueMap with the same coefficient as increment
                 valueMap.put(v, increment.valueMap.get(v));
             }
         }
         return this;
     }
 
+    /**
+     * Utility method to add up two SymbolicValues
+     * @param leftOp operand1
+     * @param rightOp operand2
+     * @return Sum of leftOp and rightOp
+     */
     public static SymbolicValue addTwoSymbolicValue(SymbolicValue leftOp, SymbolicValue rightOp){
         assert leftOp.isSymbolic() && rightOp.isSymbolic();
         Map<Variable, Integer> temporaryMap = new HashMap<Variable, Integer>();
@@ -94,6 +144,12 @@ public class SymbolicValue implements AbstractValue<SymbolicValue> {
         return new SymbolicValue(temporaryMap);
     }
 
+    /**
+     * Utility method to subtract rightOp from leftOp
+     * @param leftOp SymbolicValue to be subtracted from
+     * @param rightOp SymbolicValue to substract
+     * @return Result of leftOp - rightOp
+     */
     public static SymbolicValue subtractTwoSymbolicValue(SymbolicValue leftOp, SymbolicValue rightOp){
         assert leftOp.isSymbolic() && rightOp.isSymbolic();
         Map<Variable, Integer> temporaryMap = new HashMap<Variable, Integer>();
@@ -116,28 +172,37 @@ public class SymbolicValue implements AbstractValue<SymbolicValue> {
         return new SymbolicValue(temporaryMap);
     }
     
+    /**
+     * Takes the least upper bound of two SymbolicValue
+     */
     @Override
     public SymbolicValue leastUpperBound(SymbolicValue other) {
+        // If either one is BOTTOM, return the other one
         if (other.isBottom()) {
             return this.copy();
         }
         if (this.isBottom()) {
             return other.copy();
         }
+        // If either of the two is TOP, after merging, SymbolicValue is any.
         if (other.isTop() || this.isTop()) {
             return new SymbolicValue(Type.TOP);
         }
+        // Only if other has the same SymbolicValue as this, taking the least
+        // upper bound reserves
         if (other.getValueMap().equals(getValueMap())) {
             return this.copy();
         }
+        // In all the other cases, return TOP
         return new SymbolicValue(Type.TOP);
     }
 
     public SymbolicValue copy() {
         if (isSymbolic()) {
+            // If in SYMBOLIC state, create a new SymbolicValue with the exactly
+            // same valueMap
             return new SymbolicValue(new HashMap<Variable, Integer>(valueMap));
         }
-        // TODO Is there enum object?
         Type type = this.type;
         return new SymbolicValue(type);
     }
@@ -182,9 +247,15 @@ public class SymbolicValue implements AbstractValue<SymbolicValue> {
             return sb.substring(0, sb.length() - 1).toString();
         }
         assert false;
+        // Dead code
         return "???";
     }
 
+    /**
+     * Returns the size of this valueMap
+     *
+     * @return size of this valueMap
+     */
     public int size() {
         return valueMap.size();
     }

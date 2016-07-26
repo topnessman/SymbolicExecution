@@ -21,11 +21,27 @@ import org.checkerframework.dataflow.cfg.node.NumericalSubtractionNode;
 
 import java.util.List;
 
+/**
+ * SymbolicTransfer function implementing transfer function interface performs
+ * different operationis on different kinds of Nodes. Two tasks of
+ * SymbolicTransfer: 1. Update store with new SymbolicValue at AssignmentNode 2.
+ * Generate Constraints at each conditional branch - visitGreaterThan,
+ * visitLessThan etc.
+ *
+ * @author tamier
+ *
+ */
 public class SymbolicTransfer extends
         AbstractNodeVisitor<TransferResult<SymbolicValue, SymbolicStore>, TransferInput<SymbolicValue, SymbolicStore>>
         implements TransferFunction<SymbolicValue, SymbolicStore> {
 
+    /**
+     * ConstraintManger to store all of the Constraints generated
+     */
     ConstraintManager constraintManager = new ConstraintManager();
+    /**
+     * VariableManager to instantiate SymbolicStore
+     */
     VariableManager variableManager = new VariableManager();
 
     ConstraintManager getConstrainManager() {
@@ -54,6 +70,7 @@ public class SymbolicTransfer extends
     public TransferResult<SymbolicValue, SymbolicStore> visitLocalVariable(
         LocalVariableNode node, TransferInput<SymbolicValue, SymbolicStore> before) {
         SymbolicStore store = before.getRegularStore();
+        // Get or create a SymbolicValue for this node.
         SymbolicValue symValue = store.getOrCreateSymbolicValue(node);
         return new RegularTransferResult<SymbolicValue, SymbolicStore>(symValue, store);
     }
@@ -63,6 +80,7 @@ public class SymbolicTransfer extends
             IntegerLiteralNode n,
             TransferInput<SymbolicValue, SymbolicStore> p) {
         SymbolicStore store = p.getRegularStore();
+        // Get or create a SymbolicValue for this node.
         SymbolicValue symValue = store.getOrCreateSymbolicValue(n);
         return new RegularTransferResult<SymbolicValue, SymbolicStore>(symValue, store);
     }
@@ -74,13 +92,15 @@ public class SymbolicTransfer extends
         Node target = n.getTarget();
         Node rhs = n.getExpression();
         SymbolicValue result = null;
+        // Only update the SymbolicValue of LocalVariableNode
         if (target instanceof LocalVariableNode){
             LocalVariableNode t = (LocalVariableNode) target;
+            // Only supports addition, subtraction operation of two Nodes, and
+            // direct assignment from a rhs Node to lhs Node
             if(rhs instanceof NumericalAdditionNode){
                 NumericalAdditionNode r = (NumericalAdditionNode) rhs;
                 Node leftOp = r.getLeftOperand();
                 Node rightOp = r.getRightOperand();
-                // TODO visitLocalVariable should have put the SymbolicValue of this node already? Need to clarify
                 SymbolicValue leftValue = store.getOrCreateSymbolicValue(leftOp);
                 SymbolicValue rightValue = store.getOrCreateSymbolicValue(rightOp);
                 result = SymbolicValue.addTwoSymbolicValue(leftValue, rightValue);
@@ -89,7 +109,6 @@ public class SymbolicTransfer extends
                 NumericalSubtractionNode r = (NumericalSubtractionNode) rhs;
                 Node leftOp = r.getLeftOperand();
                 Node rightOp = r.getRightOperand();
-                // TODO visitLocalVariable should have put the SymbolicValue of this node already? Need to clarify
                 SymbolicValue leftValue = store.getOrCreateSymbolicValue(leftOp);
                 SymbolicValue rightValue = store.getOrCreateSymbolicValue(rightOp);
                 result = SymbolicValue.subtractTwoSymbolicValue(leftValue, rightValue);
@@ -105,12 +124,13 @@ public class SymbolicTransfer extends
     @Override
     public TransferResult<SymbolicValue, SymbolicStore> visitGreaterThan(
             GreaterThanNode n, TransferInput<SymbolicValue, SymbolicStore> p) {
-        // TODO don't quite propagate any value, just collect program
+        // Don't quite propagate any value, just collect program
         // constraints
         SymbolicStore thenStore = p.getRegularStore();
         SymbolicStore elseStore = p.getRegularStore();
         SymbolicValue left = thenStore.getOrCreateSymbolicValue(n.getLeftOperand());
         SymbolicValue right = thenStore.getOrCreateSymbolicValue(n.getRightOperand());
+        // Add GREATERTHAN constraint to ConstraintManager.
         constraintManager.addConstraint(left, Constraint.TYPE.GREATERTHAN, right);
         return new ConditionalTransferResult<>(null, thenStore, elseStore);
     }
@@ -153,12 +173,12 @@ public class SymbolicTransfer extends
     @Override
     public TransferResult<SymbolicValue, SymbolicStore> visitEqualTo(
             EqualToNode n, TransferInput<SymbolicValue, SymbolicStore> p) {
-        // We don't actually update store. Because if the successor performs the
-        // least upper bound operation, then it's symbolic value becomes top
-        // Second reason is: the original input value doesn't change just
-        // because of the if equal comparison. It should keep the original value
-        // before if equal, provided we don't assign a new value to it in the
-        // successors of conditional block.
+        // We don't actually update store. Because we have the contract that
+        // Node's SymbolicValues are not updated in any branch. If we update the
+        // store with the value of "==" branch, which is different from the
+        // original SymbolicValue, then after the successor performs the
+        // least upper bound operation, symbolic value becomes top, which is not
+        // expected
         SymbolicStore thenStore = p.getRegularStore();
         SymbolicStore elseStore = p.getRegularStore();
         SymbolicValue left = thenStore.getOrCreateSymbolicValue(n.getLeftOperand());
@@ -170,7 +190,7 @@ public class SymbolicTransfer extends
     @Override
     public TransferResult<SymbolicValue, SymbolicStore> visitNotEqual(
             NotEqualNode n, TransferInput<SymbolicValue, SymbolicStore> p) {
-     // We don't actually update store. 
+        // We don't actually update store.
         SymbolicStore thenStore = p.getRegularStore();
         SymbolicStore elseStore = p.getRegularStore();
         SymbolicValue left = thenStore.getOrCreateSymbolicValue(n.getLeftOperand());

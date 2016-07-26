@@ -1,4 +1,14 @@
 package org.tamier.symbolic;
+
+/**
+ * Constraint is composed of three parts: left, operator, and right. Left and
+ * right represent SymbolicValues for two Nodes; Operator has type LARGERTHAN,
+ * LESSTHAN, EQUALTO, LARGEROREQUALTO, LESSTHANOREQUALTO, EQUALTO, NOEQUALTO to
+ * model different algebra relationship between two SymbolicValue
+ *
+ * @author tamier
+ *
+ */
 public class Constraint {
     // left is type than right
     public enum TYPE {
@@ -48,6 +58,11 @@ public class Constraint {
         return right;
     }
 
+    /**
+     * Returns the negation of operator.
+     *
+     * @return negation of operator
+     */
     public TYPE getNegateType() {
         TYPE negateType = null;
         switch (type) {
@@ -76,10 +91,21 @@ public class Constraint {
         return negateType;
     }
 
+    /**
+     * Returns the negation of a Constraint. Example: a < b returns a >= b
+     *
+     * @return
+     */
     public Constraint negate() {
         return new Constraint(left, getNegateType(), right);
     }
 
+    /**
+     * Returns the String representation of operator. Needed in solver encoding
+     * step
+     *
+     * @return String representation of operator
+     */
     public String getOperator() {
         String operator = null;
         switch (getType()) {
